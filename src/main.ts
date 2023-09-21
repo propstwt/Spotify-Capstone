@@ -41,6 +41,10 @@ switch (page_id) {
       "https://open.spotify.com/embed/album/" +
       btmi.items[4].id +
       "?utm_source=generator&theme=0";
+    document.getElementById("src-artist")!.innerText = "Because you like " + artists[6][1] + ": ";
+    const albumGenres = await sdk.albums.get(btmi.items[4].id);
+    console.log(albumGenres.genres);
+    document.getElementById("genres")!.innerText = "Genres: " + albumGenres.genres;
     document.getElementById("albumRec")?.setAttribute("src", albumLink);
     break;
 }
