@@ -92,13 +92,73 @@ switch (page_id) {
 
     const sortedGenres = sortGenresByFrequency(genresArray);
     console.log(sortedGenres);
+    console.log(artists);
 
     const recommendations = await sdk.recommendations.get({
-      seed_artists: [artists[0], artists[1]],
-      seed_genres: [sortedGenres[0][0], sortedGenres[1][0]],
-      seed_tracks: [tracks[0]],
+      seed_artists: [artists[4], artists[7], artists[2]],
+      seed_genres: [sortedGenres[1][0], sortedGenres[2][0]],
     });
     console.log(recommendations);
+
+    const artist1 = await sdk.artists.get(
+      recommendations.tracks[0].artists[0].id
+    );
+    const artist1Genres = artist1.genres;
+
+    const artist2 = await sdk.artists.get(
+      recommendations.tracks[1].artists[0].id
+    );
+    const artist2Genres = artist2.genres;
+
+    const artist3 = await sdk.artists.get(
+      recommendations.tracks[2].artists[0].id
+    );
+    const artist3Genres = artist3.genres;
+
+    const artist4 = await sdk.artists.get(
+      recommendations.tracks[3].artists[0].id
+    );
+    const artist4Genres = artist4.genres;
+
+    const artist5 = await sdk.artists.get(
+      recommendations.tracks[4].artists[0].id
+    );
+    const artist5Genres = artist5.genres;
+
+    const albumLink1 =
+      "https://open.spotify.com/embed/album/" +
+      recommendations.tracks[0].album.id +
+      "?utm_source=generator&theme=0";
+    document.getElementById("albumRec1")?.setAttribute("src", albumLink1);
+    document.getElementById("genres1")!.innerText = "Genres: " + artist1Genres;
+
+    const albumLink2 =
+      "https://open.spotify.com/embed/album/" +
+      recommendations.tracks[1].album.id +
+      "?utm_source=generator&theme=0";
+    document.getElementById("albumRec2")?.setAttribute("src", albumLink2);
+    document.getElementById("genres2")!.innerText = "Genres: " + artist2Genres;
+
+    const albumLink3 =
+      "https://open.spotify.com/embed/album/" +
+      recommendations.tracks[2].album.id +
+      "?utm_source=generator&theme=0";
+    document.getElementById("albumRec3")?.setAttribute("src", albumLink3);
+    document.getElementById("genres3")!.innerText = "Genres: " + artist3Genres;
+
+    const albumLink4 =
+      "https://open.spotify.com/embed/album/" +
+      recommendations.tracks[3].album.id +
+      "?utm_source=generator&theme=0";
+    document.getElementById("albumRec4")?.setAttribute("src", albumLink4);
+    document.getElementById("genres4")!.innerText = "Genres: " + artist4Genres;
+
+    const albumLink5 =
+      "https://open.spotify.com/embed/album/" +
+      recommendations.tracks[4].album.id +
+      "?utm_source=generator&theme=0";
+    document.getElementById("albumRec5")?.setAttribute("src", albumLink5);
+    document.getElementById("genres5")!.innerText = "Genres: " + artist5Genres;
 
     // type savedAlbum = [string, string];
     // let savedAlbums: savedAlbum[] = [];
