@@ -8,6 +8,7 @@ const scopes = [
   "user-read-currently-playing",
   "user-top-read",
   "user-library-read",
+  "user-follow-read",
 ];
 
 const sdk = SpotifyApi.withUserAuthorization(
@@ -26,7 +27,7 @@ switch (page_id) {
     const topArtists = await sdk.currentUser.topItems(
       "artists",
       "long_term",
-      10
+      20
     );
     type artist = [string, string];
     let artists: artist[] = [];
@@ -34,18 +35,60 @@ switch (page_id) {
       const { id, name } = data;
       artists.push([id, name]);
     });
-    const jeffArtists = await sdk.artists.relatedArtists(artists[6][0]);
-    const btmi = await sdk.artists.albums(jeffArtists.artists[1].id);
-    console.log(btmi);
-    const albumLink =
-      "https://open.spotify.com/embed/album/" +
-      btmi.items[4].id +
-      "?utm_source=generator&theme=0";
-    document.getElementById("src-artist")!.innerText = "Because you like " + artists[6][1] + ": ";
-    const albumGenres = await sdk.albums.get(btmi.items[4].id);
-    console.log(albumGenres.genres);
-    document.getElementById("genres")!.innerText = "Genres: " + albumGenres.genres;
-    document.getElementById("albumRec")?.setAttribute("src", albumLink);
+
+    type followedArtist = [string, string, number, string[]];
+    let followedArtists: followedArtist[] = [];
+    let artistsStillRemain = true;
+    type next = string
+    let lastFollowedArtist: next = ""
+    let currFollowedArtists = null;
+
+    while (artistsStillRemain) {
+      if (lastFollowedArtist == null) {
+        currFollowedArtists = await sdk.currentUser.followedArtists(undefined, 50);
+      }
+      else {
+        currFollowedArtists = await sdk.currentUser.followedArtists(lastFollowedArtist, 50);
+      }
+
+      lastFollowedArtist = currFollowedArtists.artists.items[currFollowedArtists.artists.items.length - 1].id;
+
+      currFollowedArtists.artists.items.forEach((data) => {
+        const {name, id, popularity, genres} = data;
+        followedArtists.push([name, id, popularity, genres]);
+      });
+
+
+      if (currFollowedArtists.artists.next == null) {
+        artistsStillRemain = false;
+      }
+    }
+    console.log(followedArtists);
+
+
+    type savedAlbum = [string, string, number];
+    let savedAlbums: savedAlbum[] = [];
+    let albumsStillRemain = true;
+    let currOffset = 0;
+    let currSavedAlbum = null;
+    while (albumsStillRemain) {
+      currSavedAlbum = await sdk.currentUser.albums.savedAlbums(50, currOffset)
+
+      currSavedAlbum.items.forEach((data) => {
+        const {album} = data;
+        savedAlbums.push([album.name, album.id, album.popularity]);
+      })
+            
+      currOffset += 50;
+      console.log(currOffset);
+      console.log(currSavedAlbum.total);
+      if (currSavedAlbum.total < currOffset) {
+        albumsStillRemain = false;
+      }
+    }
+    
+    console.log(savedAlbums);
+
     break;
 }
 
