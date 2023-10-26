@@ -26,68 +26,102 @@ switch (page_id) {
   case "recs":
     const topArtists = await sdk.currentUser.topItems(
       "artists",
-      "long_term",
+      "medium_term",
       20
     );
-    type artist = [string, string];
+    type artist = string;
     let artists: artist[] = [];
     topArtists.items.forEach((data) => {
-      const { id, name } = data;
-      artists.push([id, name]);
+      const { id } = data;
+      artists.push(id);
     });
 
-    type followedArtist = [string, string, number, string[]];
+    const topTracks = await sdk.currentUser.topItems(
+      "tracks",
+      "medium_term",
+      20
+    );
+    type track = string;
+    let tracks: track[] = [];
+    topTracks.items.forEach((data) => {
+      const { id } = data;
+      tracks.push(id);
+    });
+
+    console.log(tracks);
+
+    type followedArtist = [string, string, number];
+    type genre = string[];
+    let genresArray: genre[] = [];
     let followedArtists: followedArtist[] = [];
     let artistsStillRemain = true;
-    type next = string
-    let lastFollowedArtist: next = ""
+    type next = string;
+    let lastFollowedArtist: next = "";
     let currFollowedArtists = null;
 
     while (artistsStillRemain) {
       if (lastFollowedArtist == null) {
-        currFollowedArtists = await sdk.currentUser.followedArtists(undefined, 50);
-      }
-      else {
-        currFollowedArtists = await sdk.currentUser.followedArtists(lastFollowedArtist, 50);
+        currFollowedArtists = await sdk.currentUser.followedArtists(
+          undefined,
+          50
+        );
+      } else {
+        currFollowedArtists = await sdk.currentUser.followedArtists(
+          lastFollowedArtist,
+          50
+        );
       }
 
-      lastFollowedArtist = currFollowedArtists.artists.items[currFollowedArtists.artists.items.length - 1].id;
+      lastFollowedArtist =
+        currFollowedArtists.artists.items[
+          currFollowedArtists.artists.items.length - 1
+        ].id;
 
       currFollowedArtists.artists.items.forEach((data) => {
-        const {name, id, popularity, genres} = data;
-        followedArtists.push([name, id, popularity, genres]);
+        const { name, id, popularity, genres } = data;
+        followedArtists.push([name, id, popularity]);
+        genresArray.push(genres);
       });
-
 
       if (currFollowedArtists.artists.next == null) {
         artistsStillRemain = false;
       }
     }
     console.log(followedArtists);
+    console.log(genresArray);
 
+    const sortedGenres = sortGenresByFrequency(genresArray);
+    console.log(sortedGenres);
 
-    type savedAlbum = [string, string, number];
-    let savedAlbums: savedAlbum[] = [];
-    let albumsStillRemain = true;
-    let currOffset = 0;
-    let currSavedAlbum = null;
-    while (albumsStillRemain) {
-      currSavedAlbum = await sdk.currentUser.albums.savedAlbums(50, currOffset)
+    const recommendations = await sdk.recommendations.get({
+      seed_artists: [artists[0], artists[1]],
+      seed_genres: [sortedGenres[0][0], sortedGenres[1][0]],
+      seed_tracks: [tracks[0]],
+    });
+    console.log(recommendations);
 
-      currSavedAlbum.items.forEach((data) => {
-        const {album} = data;
-        savedAlbums.push([album.name, album.id, album.popularity]);
-      })
-            
-      currOffset += 50;
-      console.log(currOffset);
-      console.log(currSavedAlbum.total);
-      if (currSavedAlbum.total < currOffset) {
-        albumsStillRemain = false;
-      }
-    }
-    
-    console.log(savedAlbums);
+    // type savedAlbum = [string, string];
+    // let savedAlbums: savedAlbum[] = [];
+    // let albumsStillRemain = true;
+    // let currOffset = 0;
+    // let currSavedAlbum = null;
+    // while (albumsStillRemain) {
+    //   currSavedAlbum = await sdk.currentUser.albums.savedAlbums(50, currOffset)
+
+    //   currSavedAlbum.items.forEach((data) => {
+    //     const {album} = data;
+    //     savedAlbums.push([album.name, album.id]);
+    //   })
+
+    //   currOffset += 50;
+    //   console.log(currOffset);
+    //   console.log(currSavedAlbum.total);
+    //   if (currSavedAlbum.total < currOffset) {
+    //     albumsStillRemain = false;
+    //   }
+    // }
+
+    // console.log(savedAlbums);
 
     break;
 }
@@ -95,4 +129,30 @@ switch (page_id) {
 async function authorize() {
   const profile = await sdk.currentUser.profile();
   location.href = "./recommendations.html";
+}
+
+function countGenres(genreArrays: string[][]): Map<string, number> {
+  const genreMap = new Map<string, number>();
+
+  // Flatten the nested arrays and filter out empty strings and arrays
+  const flatGenres = genreArrays.flat().filter((genre) => genre.trim() !== "");
+
+  // Count the occurrence of each genre
+  flatGenres.forEach((genre) => {
+    const count = genreMap.get(genre) || 0;
+    genreMap.set(genre, count + 1);
+  });
+
+  return genreMap;
+}
+
+function sortGenresByFrequency(genreArrays: string[][]): [string, number][] {
+  const genreMap = countGenres(genreArrays);
+
+  // Convert the Map to an array of [genre, count] pairs and sort by count
+  const sortedGenres = Array.from(genreMap.entries())
+    .filter(([_, count]) => count > 1) // Remove genres with a count of 1
+    .sort((a, b) => b[1] - a[1]);
+
+  return sortedGenres;
 }
