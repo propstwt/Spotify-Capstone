@@ -26,8 +26,8 @@ switch (page_id) {
   case "recs":
     const topArtists = await sdk.currentUser.topItems(
       "artists",
-      "medium_term",
-      20
+      "short_term",
+      10
     );
     type artist = string;
     let artists: artist[] = [];
@@ -38,8 +38,8 @@ switch (page_id) {
 
     const topTracks = await sdk.currentUser.topItems(
       "tracks",
-      "medium_term",
-      20
+      "short_term",
+      10
     );
     type track = string;
     let tracks: track[] = [];
@@ -48,7 +48,7 @@ switch (page_id) {
       tracks.push(id);
     });
 
-    console.log(tracks);
+    // console.log(tracks);
 
     type followedArtist = [string, string, number];
     type genre = string[];
@@ -87,18 +87,56 @@ switch (page_id) {
         artistsStillRemain = false;
       }
     }
-    console.log(followedArtists);
+    // console.log(followedArtists);
     console.log(genresArray);
 
     const sortedGenres = sortGenresByFrequency(genresArray);
     console.log(sortedGenres);
+    // console.log(artists);
+
+    type genreToCheck = string;
+    let genresToCheck: genreToCheck[] = [];
+
+    for (let index = 0; index < 10; index++) {
+      genresToCheck.push(sortedGenres[index][0]);
+    }
+
+    console.log(genresToCheck);
+
+    type similarArtist = [string, string, string[]];
+    let similarArtists: similarArtist[] = [];
     console.log(artists);
+
+    for (let i = 0; i < artists.length; i++) {
+      const currSimArtists = await sdk.artists.relatedArtists(artists[i]);
+      for (let j = 0; j < 3; j++) {
+        similarArtists.push([
+          currSimArtists.artists[j].name,
+          currSimArtists.artists[j].id,
+          currSimArtists.artists[j].genres,
+        ]);
+      }
+    }
+    console.log(similarArtists);
+
+    // const similarArtists = await sdk.artists.relatedArtists(artists[0]);
+    // console.log(artists[0]);
+    // console.log(similarArtists);
+
+    let filteredSimilarArtists: similarArtist[] = [];
+
+    for (let index = 0; index < similarArtists.length; index++) {
+      const currArtistID = similarArtists[index][1]
+      const currArtistGenres = similarArtists[index][2]
+      
+      
+    }
 
     const recommendations = await sdk.recommendations.get({
       seed_artists: [artists[4], artists[7], artists[2]],
       seed_genres: [sortedGenres[1][0], sortedGenres[2][0]],
     });
-    console.log(recommendations);
+    // console.log(recommendations);
 
     const artist1 = await sdk.artists.get(
       recommendations.tracks[0].artists[0].id
