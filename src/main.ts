@@ -27,19 +27,19 @@ switch (page_id) {
     const topArtists = await sdk.currentUser.topItems(
       "artists",
       "short_term",
-      10
+      50
     );
-    type artist = string;
-    let artists: artist[] = [];
+    type userTopArtist = [string, string, string[]];
+    let artists: userTopArtist[] = [];
     topArtists.items.forEach((data) => {
-      const { id } = data;
-      artists.push(id);
+      const { name, id, genres } = data;
+      artists.push([name, id, genres])
     });
 
     const topTracks = await sdk.currentUser.topItems(
       "tracks",
       "short_term",
-      10
+      50
     );
     type track = string;
     let tracks: track[] = [];
@@ -78,9 +78,9 @@ switch (page_id) {
         ].id;
 
       currFollowedArtists.artists.items.forEach((data) => {
-        const { name, id, popularity, genres } = data;
+        const { name, id, popularity} = data;
         followedArtists.push([name, id, popularity]);
-        genresArray.push(genres);
+        // genresArray.push(genres);
       });
 
       if (currFollowedArtists.artists.next == null) {
@@ -88,7 +88,12 @@ switch (page_id) {
       }
     }
     // console.log(followedArtists);
-    console.log(genresArray);
+    // console.log(genresArray);
+
+    for (let i = 0; i < artists.length; i++) {
+      genresArray.push(artists[i][2]);
+    }
+
 
     const sortedGenres = sortGenresByFrequency(genresArray);
     console.log(sortedGenres);
@@ -97,7 +102,7 @@ switch (page_id) {
     type genreToCheck = string;
     let genresToCheck: genreToCheck[] = [];
 
-    for (let index = 0; index < 10; index++) {
+    for (let index = 0; index < 15; index++) {
       genresToCheck.push(sortedGenres[index][0]);
     }
 
@@ -105,18 +110,43 @@ switch (page_id) {
 
     type similarArtist = [string, string, string[]];
     let similarArtists: similarArtist[] = [];
-    console.log(artists);
+    // console.log(artists);
 
-    for (let i = 0; i < artists.length; i++) {
-      const currSimArtists = await sdk.artists.relatedArtists(artists[i]);
-      for (let j = 0; j < 3; j++) {
-        similarArtists.push([
-          currSimArtists.artists[j].name,
-          currSimArtists.artists[j].id,
-          currSimArtists.artists[j].genres,
-        ]);
+    for (let i = 0; i < 10; i++) {
+      const currSimArtists = await sdk.artists.relatedArtists(artists[i][1]);
+      let currSimArtistsIDs: string[] = []
+      for (let j = 0; j < currSimArtists.artists.length; j++) {
+        currSimArtistsIDs.push(currSimArtists.artists[j].id)
       }
+      const isSimArtistFollowed = await sdk.currentUser.followsArtistsOrUsers(currSimArtistsIDs, "artist");
+      let amountGoodArtists = 0;
+      for (let j = 0; j < currSimArtistsIDs.length; j++) {
+        if (amountGoodArtists == 3) {
+          break;
+        }
+        if (!isSimArtistFollowed[j] && !similarArtists.some(row => row.includes(currSimArtists.artists[j].name))) {
+          similarArtists.push([
+            currSimArtists.artists[j].name,
+            currSimArtists.artists[j].id,
+            currSimArtists.artists[j].genres,
+          ]);
+          amountGoodArtists +=1;
+          console.log(currSimArtists.artists[j].name); 
+        }
+      }
+      console.log("artist complete");
     }
+
+    console.log(similarArtists);
+    
+    let similarArtistsIDs: string[] = []
+    for (let index = 0; index < similarArtists.length; index++) {
+      similarArtistsIDs.push(similarArtists[index][1])
+    }
+    console.log(similarArtistsIDs);
+    const isArtistFollowed = await sdk.currentUser.followsArtistsOrUsers(similarArtistsIDs, "artist");
+    console.log(isArtistFollowed);
+
     console.log(similarArtists);
 
     // const similarArtists = await sdk.artists.relatedArtists(artists[0]);
@@ -124,16 +154,25 @@ switch (page_id) {
     // console.log(similarArtists);
 
     let filteredSimilarArtists: similarArtist[] = [];
+    console.log(genresToCheck);
 
-    for (let index = 0; index < similarArtists.length; index++) {
-      const currArtistID = similarArtists[index][1]
-      const currArtistGenres = similarArtists[index][2]
-      
-      
+    for (let i = 0; i < similarArtists.length; i++) {
+      const currArtistGenres = similarArtists[i][2]
+      if (!isArtistFollowed[i]) {
+        for (let j = 0; j < currArtistGenres.length; j++) {
+          if (genresToCheck.includes(currArtistGenres[j])) {
+            filteredSimilarArtists.push(similarArtists[i]);
+            console.log(currArtistGenres[j]);
+            console.log("added");
+            break;
+          }          
+        }
+      }  
     }
+    console.log(filteredSimilarArtists);
 
     const recommendations = await sdk.recommendations.get({
-      seed_artists: [artists[4], artists[7], artists[2]],
+      seed_artists: [artists[4][1], artists[7][1], artists[2][1]],
       seed_genres: [sortedGenres[1][0], sortedGenres[2][0]],
     });
     // console.log(recommendations);
@@ -163,40 +202,40 @@ switch (page_id) {
     );
     const artist5Genres = artist5.genres;
 
-    const albumLink1 =
-      "https://open.spotify.com/embed/album/" +
-      recommendations.tracks[0].album.id +
-      "?utm_source=generator&theme=0";
-    document.getElementById("albumRec1")?.setAttribute("src", albumLink1);
-    document.getElementById("genres1")!.innerText = "Genres: " + artist1Genres;
+    // const albumLink1 =
+    //   "https://open.spotify.com/embed/album/" +
+    //   recommendations.tracks[0].album.id +
+    //   "?utm_source=generator&theme=0";
+    // document.getElementById("albumRec1")?.setAttribute("src", albumLink1);
+    // document.getElementById("genres1")!.innerText = "Genres: " + artist1Genres;
 
-    const albumLink2 =
-      "https://open.spotify.com/embed/album/" +
-      recommendations.tracks[1].album.id +
-      "?utm_source=generator&theme=0";
-    document.getElementById("albumRec2")?.setAttribute("src", albumLink2);
-    document.getElementById("genres2")!.innerText = "Genres: " + artist2Genres;
+    // const albumLink2 =
+    //   "https://open.spotify.com/embed/album/" +
+    //   recommendations.tracks[1].album.id +
+    //   "?utm_source=generator&theme=0";
+    // document.getElementById("albumRec2")?.setAttribute("src", albumLink2);
+    // document.getElementById("genres2")!.innerText = "Genres: " + artist2Genres;
 
-    const albumLink3 =
-      "https://open.spotify.com/embed/album/" +
-      recommendations.tracks[2].album.id +
-      "?utm_source=generator&theme=0";
-    document.getElementById("albumRec3")?.setAttribute("src", albumLink3);
-    document.getElementById("genres3")!.innerText = "Genres: " + artist3Genres;
+    // const albumLink3 =
+    //   "https://open.spotify.com/embed/album/" +
+    //   recommendations.tracks[2].album.id +
+    //   "?utm_source=generator&theme=0";
+    // document.getElementById("albumRec3")?.setAttribute("src", albumLink3);
+    // document.getElementById("genres3")!.innerText = "Genres: " + artist3Genres;
 
-    const albumLink4 =
-      "https://open.spotify.com/embed/album/" +
-      recommendations.tracks[3].album.id +
-      "?utm_source=generator&theme=0";
-    document.getElementById("albumRec4")?.setAttribute("src", albumLink4);
-    document.getElementById("genres4")!.innerText = "Genres: " + artist4Genres;
+    // const albumLink4 =
+    //   "https://open.spotify.com/embed/album/" +
+    //   recommendations.tracks[3].album.id +
+    //   "?utm_source=generator&theme=0";
+    // document.getElementById("albumRec4")?.setAttribute("src", albumLink4);
+    // document.getElementById("genres4")!.innerText = "Genres: " + artist4Genres;
 
-    const albumLink5 =
-      "https://open.spotify.com/embed/album/" +
-      recommendations.tracks[4].album.id +
-      "?utm_source=generator&theme=0";
-    document.getElementById("albumRec5")?.setAttribute("src", albumLink5);
-    document.getElementById("genres5")!.innerText = "Genres: " + artist5Genres;
+    // const albumLink5 =
+    //   "https://open.spotify.com/embed/album/" +
+    //   recommendations.tracks[4].album.id +
+    //   "?utm_source=generator&theme=0";
+    // document.getElementById("albumRec5")?.setAttribute("src", albumLink5);
+    // document.getElementById("genres5")!.innerText = "Genres: " + artist5Genres;
 
     // type savedAlbum = [string, string];
     // let savedAlbums: savedAlbum[] = [];
